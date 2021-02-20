@@ -93,10 +93,30 @@ class TfDatasetCSV(object):
     def get_dataset_from_txts(self, filenames: list, parser_func):
         """ 构建文本文件数据集 """
         list_ds = tf.data.Dataset.list_files(filenames)
+        print(list_ds)
+        print(type(list_ds))
         dataset = list_ds.interleave(
-            lambda fp: tf.data.TextLineDataset(fp).skip(self._skip_head_lines),
+            lambda fp: tf.data.TextLineDataset(fp).skip(self._skip_head_lines),1
         )
         dataset = dataset.map(map_func=parser_func)
         dataset = dataset.batch(self._batch_size)
         dataset = dataset.prefetch(self._batch_size)
         return dataset
+
+
+import yaml
+from pathlib import Path
+if __name__ =='__main__':
+    dataset_config = yaml.load(open("criteo.yml"), Loader=yaml.FullLoader)
+    dataseter = TfDatasetCSV(
+        dataset_config.get("dataset").get("header").split(","),
+        dataset_config.get("dataset").get("select_indexs").split(","),
+        dataset_config.get("dataset").get("select_defs").split(","),
+        dataset_config.get("dataset").get("label_index"),
+        16,#args.batch_size,
+        skip_head_lines=dataset_config.get("dataset").get("skip_head_lines"),
+        field_delim=dataset_config.get("dataset").get("field_delim"),
+        na_value=dataset_config.get("dataset").get("na_value")
+    )
+    train_dataset, train_steps = dataseter(
+        [str(fn) for fn in Path('').glob("*.txt")])
